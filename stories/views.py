@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework import permissions
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -8,6 +9,8 @@ from .serializers import StorySerializer
 from .models import StoryNode
 from .serializers import StoryNodeSerializer
 from rest_framework import generics
+from .models import UserProgress
+from .serializers import UserProgressSerializer
 
 # Lista todos los nodos de una historia / Crea nodo
 class StoryNodeListCreateView(generics.ListCreateAPIView):
@@ -61,3 +64,41 @@ class StoryProgressView(APIView):
 
         serializer = StoryNodeSerializer(next_node)
         return Response(serializer.data)
+
+# GET /api/progress/
+class UserProgressListView(generics.ListAPIView):
+    serializer_class = UserProgressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return UserProgress.objects.filter(user=self.request.user)
+
+# GET, POST, DELETE /api/progress/{story_id}/
+class UserProgressDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, story_id):
+        progress = UserProgress.objects.filter(user=request.user, story_id=story_id).first()
+        if not progress:
+            return Response({'detail': 'No progress found.'}, status=404)
+        serializer = UserProgressSerializer(progress)
+        return Response(serializer.data)
+
+    def post(self, request, story_id):
+        node_id = request.data.get('current_node_id')
+        if not node_id:
+            return Response({'detail': 'Missing current_node_id.'}, status=400)
+
+        progress, created = UserProgress.objects.update_or_create(
+            user=request.user,
+            story_id=story_id,
+            defaults={'current_node_id': node_id}
+        )
+        serializer = UserProgressSerializer(progress)
+        return Response(serializer.data, status=201 if created else 200)
+
+    def delete(self, request, story_id):
+        deleted, _ = UserProgress.objects.filter(user=request.user, story_id=story_id).delete()
+        if deleted:
+            return Response({'detail': 'Progress reset.'})
+        return Response({'detail': 'No progress to delete.'}, status=404)

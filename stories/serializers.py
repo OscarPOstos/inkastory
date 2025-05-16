@@ -1,5 +1,10 @@
 from rest_framework import serializers
-from .models import Story, StoryNode
+from .models import Story, StoryNode, UserProgress
+
+class UserProgressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProgress
+        fields = ['id', 'story', 'current_node', 'updated_at']
 
 class StoryNodeSerializer(serializers.ModelSerializer):
     class Meta:

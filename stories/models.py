@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Story(models.Model):
     title = models.CharField(max_length=255)
@@ -23,3 +24,15 @@ class StoryNode(models.Model):
 
     def __str__(self):
         return f'Node {self.id} in Story "{self.story.title}"'
+
+class UserProgress(models.Model):
+    user = models.ForeignKey(User, related_name='progress', on_delete=models.CASCADE)
+    story = models.ForeignKey(Story, related_name='progress', on_delete=models.CASCADE)
+    current_node = models.ForeignKey(StoryNode, on_delete=models.SET_NULL, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'story')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.story.title} @ Node {self.current_node_id}"

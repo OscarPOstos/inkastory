@@ -11,6 +11,8 @@ from .serializers import StoryNodeSerializer
 from rest_framework import generics
 from .models import UserProgress
 from .serializers import UserProgressSerializer
+from django.contrib.auth.models import User
+from rest_framework.serializers import ModelSerializer
 
 # Lista todos los nodos de una historia / Crea nodo
 class StoryNodeListCreateView(generics.ListCreateAPIView):
@@ -102,3 +104,27 @@ class UserProgressDetailView(APIView):
         if deleted:
             return Response({'detail': 'Progress reset.'})
         return Response({'detail': 'No progress to delete.'}, status=404)
+
+class StoryEndingsView(generics.ListAPIView):
+    serializer_class = StoryNodeSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        story_id = self.kwargs['story_id']
+        return StoryNode.objects.filter(story_id=story_id, is_ending=True)
+
+class SimpleUserSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username']
+
+class StoryCompletedByView(generics.ListAPIView):
+    serializer_class = SimpleUserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        story_id = self.kwargs['story_id']
+        return User.objects.filter(
+            progress__story_id=story_id,
+            progress__current_node__is_ending=True
+        ).distinct()

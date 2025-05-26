@@ -36,3 +36,14 @@ class UserProgress(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.story.title} @ Node {self.current_node_id}"
+
+class StoryVote(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='votes')
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='votes')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'story')
+
+    def __str__(self):
+        return f'{self.user.username} voted for "{self.story.title}"'

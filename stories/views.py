@@ -13,6 +13,33 @@ from .models import UserProgress
 from .serializers import UserProgressSerializer
 from django.contrib.auth.models import User
 from rest_framework.serializers import ModelSerializer
+from django.db.models import Count, Q
+
+class PopularStoriesView(generics.ListAPIView):
+    serializer_class = StorySerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        return Story.objects.annotate(
+            completed_count=Count(
+                'progress',
+                filter=Q(progress__current_node__is_ending=True),
+                distinct=True
+            ),
+            vote_count=Count('votes', distinct=True)
+        ).order_by('-completed_count', '-vote_count')[:10]
+
+class VoteStoryView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, story_id):
+        story = get_object_or_404(Story, id=story_id)
+        vote, created = StoryVote.objects.get_or_create(user=request.user, story=story)
+
+        if not created:
+            return Response({'detail': 'Already voted.'}, status=400)
+
+        return Response({'detail': 'Voted successfully.'}, status=201)
 
 # Lista todos los nodos de una historia / Crea nodo
 class StoryNodeListCreateView(generics.ListCreateAPIView):
